@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -57,6 +58,13 @@ func (s *service) Run() {
 		}
 	}()
 
+	go func() {
+		for {
+			logrus.Info("Cleaning cache...")
+			time.Sleep(time.Hour * 1)
+		}
+	}()
+
 	// Отключение
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -79,4 +87,14 @@ func init() {
 		FullTimestamp:   true,
 	})
 	logrus.SetLevel(logrus.DebugLevel)
+}
+
+func (s *service) WriteResponse(w http.ResponseWriter, code int, msg string) {
+	w.WriteHeader(code)
+	type response struct {
+		Message string `json:"message"`
+	}
+	res := response{Message: msg}
+	body, _ := json.Marshal(&res)
+	w.Write(body)
 }

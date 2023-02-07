@@ -10,8 +10,9 @@ import (
 
 type ICacheRepository interface {
 	AddToCache(ctx context.Context, key, value string) error
-	GetUserFromCache(ctx context.Context, key string) (string, error)
-	CleanCache(ctx context.Context) error
+	GetUsersFromCache(ctx context.Context, key string) (string, error)
+	DeleteValue(ctx context.Context, key string) error
+	ClearCache(ctx context.Context) error
 }
 
 type cache struct {

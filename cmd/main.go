@@ -13,7 +13,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	app, err := service.NewService(ctx)
+	app, err := service.NewService(ctx, conf)
 	if err != nil {
 		panic(err)
 	}

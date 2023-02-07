@@ -35,7 +35,7 @@ func (s *service) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logrus.Info("User succesfully created")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 	w.Write([]byte(fmt.Sprintf("Пользователь успешно создан. ID пользователя %d", id)))
 }
 

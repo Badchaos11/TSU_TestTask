@@ -1,18 +1,24 @@
 version: "3.9"
 
 services:
-  tsu-api:
-   build: .
-   container_name: tsu-api
-   ports:
-     - "3000:3000"
-   networks:
-    - tsu-network
-   volumes:
-    - type: bind
-      source: ./configs
-      target:
-          /configs
+  # tsu-api:
+  #  build: .
+  #  container_name: tsu-api
+  #  ports:
+  #    - "3000:3000"
+  #  networks:
+  #   - tsu-network
+  #  volumes:
+  #   - type: bind
+  #     source: ./configs
+  #     target:
+  #         /configs
+  redis-cache:
+    image: redis:latest
+    container_name: redis-cache
+    ports:
+      - 6379:6379
+    restart: always
 
 networks:
   tsu-network:
