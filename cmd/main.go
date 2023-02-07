@@ -1,9 +1,19 @@
 package main
 
-import "github.com/Badchaos11/TSU_TestTask/service"
+import (
+	"context"
+
+	"github.com/Badchaos11/TSU_TestTask/config"
+	"github.com/Badchaos11/TSU_TestTask/service"
+)
 
 func main() {
-	app, err := service.NewService()
+	ctx := context.Background()
+	conf, err := config.LoadConfig()
+	if err != nil {
+		panic(err)
+	}
+	app, err := service.NewService(ctx)
 	if err != nil {
 		panic(err)
 	}

@@ -1,1 +1,19 @@
 version: "3.9"
+
+services:
+  tsu-api:
+   build: .
+   container_name: tsu-api
+   ports:
+     - "3000:3000"
+   networks:
+    - tsu-network
+   volumes:
+    - type: bind
+      source: ./configs
+      target:
+          /configs
+
+networks:
+  tsu-network:
+   name: tsu-network

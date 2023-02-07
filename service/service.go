@@ -8,16 +8,24 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/Badchaos11/TSU_TestTask/model"
+	"github.com/Badchaos11/TSU_TestTask/repository"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
 
 type service struct {
 	Port string
+	Repo repository.IRepository
 }
 
-func NewService() (*service, error) {
-	return &service{Port: "3000"}, nil
+func NewService(ctx context.Context, config *model.Config) (*service, error) {
+	conn, err := repository.NewRepository(ctx, "")
+	if err != nil {
+		logrus.Errorf("Unable to connect database error %v", err)
+		return nil, err
+	}
+	return &service{Port: "3000", Repo: conn}, nil
 }
 
 func (s *service) Run() {

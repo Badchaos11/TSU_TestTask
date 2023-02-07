@@ -83,4 +83,48 @@ func (r *PGXRepo) GetUserByID(ctx context.Context, userId int64) (*model.User, e
 	return &u, nil
 }
 
-func (r *PGXRepo) GetUserFilter(ctx context.Context, filter model.UserFilter) ([]model.User, error)
+func (r *PGXRepo) GetUserFilter(ctx context.Context, filter model.UserFilter) ([]model.User, error) {
+	sq := squirrel.Select("*").From("users").PlaceholderFormat(squirrel.Dollar)
+	if filter.Limit > 0 {
+		sq = sq.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		sq = sq.Offset(filter.Offset)
+	}
+
+	if filter.Sex != "" {
+		sq = sq.Where("sex", filter.Sex)
+	}
+	if filter.Status != "" {
+		sq = sq.Where("status", filter.Status)
+	}
+
+	if filter.OrderBy == "sex" || filter.OrderBy == "status" {
+		sq = sq.OrderBy(filter.OrderBy, "desc")
+	}
+
+	sql, args, _ := sq.ToSql()
+	var res []model.User
+	rows, err := r.Conn.Query(ctx, sql, args...)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			logrus.Error("No userf for this filter")
+			return nil, nil
+		}
+		logrus.Errorf("error select users error %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var row model.User
+		err := rows.Scan(&row.Id, &row.Name, &row.Surname, &row.Patronymic, &row.Sex, &row.Status, &row.BirthDate, &row.Created)
+		if err != nil {
+			logrus.Errorf("error scannig row %v", err)
+			return nil, err
+		}
+		res = append(res, row)
+	}
+
+	return res, nil
+}

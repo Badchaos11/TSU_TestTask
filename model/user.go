@@ -16,8 +16,14 @@ type User struct {
 type UserFilter struct {
 	Sex      string `json:"sex,omitempty"`
 	Status   string `json:"status,omitempty"`
+	ByName   bool   `json:"by_name,omitempty"`
 	FullName string `json:"fullname,omitempty"`
-	SortDesc bool   `json:"sort_desc,omitempty"`
-	Limit    int64  `json:"limit,omitempty"`
-	Offset   int64  `json:"offset,omitempty"`
+	OrderBy  string `json:"order_by,omitempty"`
+	Desc     bool   `json:"sort_desc,omitempty"`
+	Limit    uint64 `json:"limit,omitempty"`
+	Offset   uint64 `json:"offset,omitempty"`
+}
+
+type ResponseMessage struct {
+	Message string `json:"message"`
 }
