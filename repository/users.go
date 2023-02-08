@@ -127,7 +127,8 @@ func (r *Repo) GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([
 
 	if filter.OrderBy == "sex" || filter.OrderBy == "status" {
 		if filter.Desc != nil && *filter.Desc {
-			sq = sq.OrderBy(filter.OrderBy, "desc")
+			sq = sq.OrderBy(filter.OrderBy)
+			sq = sq.Suffix("desc")
 		}
 		sq = sq.OrderBy(filter.OrderBy)
 	}

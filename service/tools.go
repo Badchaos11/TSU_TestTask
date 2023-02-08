@@ -2,28 +2,27 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
 	"github.com/Badchaos11/TSU_TestTask/model"
-	"github.com/xuri/excelize/v2"
+	"github.com/tealeg/xlsx"
 )
 
-func (s *service) WriteResponse(w http.ResponseWriter, code int, msg string, err error) {
+func (s *service) WriteResponse(w http.ResponseWriter, code int, msg string) {
 	w.WriteHeader(code)
 	type response struct {
 		Message string `json:"message"`
-		Error   string `json:"error"`
 	}
-	res := response{Message: msg, Error: err.Error()}
+	res := response{Message: msg}
 	body, _ := json.Marshal(&res)
 	w.Write(body)
 }
 
 func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 	var limit, offset int64
-	var byName, desc *bool
+	var byName, desc bool
 
 	sex := r.URL.Query().Get("sex")
 	status := r.URL.Query().Get("status")
@@ -46,14 +45,12 @@ func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 		offset = 0
 	}
 
-	*byName, err = strconv.ParseBool(byNameStr)
-	if err != nil {
-		byName = nil
+	if byNameStr != "" {
+		byName, _ = strconv.ParseBool(byNameStr)
 	}
 
-	*desc, err = strconv.ParseBool(descStr)
-	if err != nil {
-		desc = nil
+	if descStr != "" {
+		desc, _ = strconv.ParseBool(descStr)
 	}
 
 	return model.UserFilter{
@@ -62,30 +59,30 @@ func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 		OrderBy:    orderBy,
 		Limit:      uint64(limit),
 		Offset:     uint64(offset),
-		Desc:       desc,
-		ByName:     byName,
+		Desc:       &desc,
+		ByName:     &byName,
 		Name:       name,
 		Surname:    surname,
 		Patronymic: patr,
 	}
 }
 
-func (s *service) GetUserFromFile(fileName string) (*model.User, error) {
-	f, err := excelize.OpenFile(fmt.Sprintf("./userfiles/%s.xlsx", fileName))
+func (s *service) GetUserFromFile(file multipart.File, size int64) (*model.User, error) {
+	f, err := xlsx.OpenReaderAt(file, size)
 	if err != nil {
 		return nil, err
 	}
 
-	cellName, _ := f.GetCellValue("Sheet1", "A1")
-	cellSurname, _ := f.GetCellValue("Sheet1", "B1")
-	cellPatr, _ := f.GetCellValue("Sheet1", "C1")
-	cellSex, _ := f.GetCellValue("Sheet1", "D1")
-	// cellMail, _ := f.GetCellValue("Sheet1", "E1")
+	ss := f.Sheets[0]
+	name := ss.Cell(0, 0).Value
+	surname := ss.Cell(1, 0).Value
+	patr := ss.Cell(2, 0).Value
+	sex := ss.Cell(3, 0).Value
 
 	return &model.User{
-		Name:       cellName,
-		Surname:    cellSurname,
-		Patronymic: cellPatr,
-		Sex:        cellSex,
+		Name:       name,
+		Surname:    surname,
+		Patronymic: patr,
+		Sex:        sex,
 	}, nil
 }

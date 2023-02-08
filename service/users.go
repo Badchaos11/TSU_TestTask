@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/Badchaos11/TSU_TestTask/model"
@@ -19,166 +18,149 @@ func (s *service) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		logrus.Errorf("Error reading request body error %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось создать подьзователя из-за внутренней ошибки."))
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось создать подьзователя из-за внутренней ошибки")
 		return
 	}
 	var req model.User
 	err = jsoniter.Unmarshal(body, &req)
 	if err != nil {
 		logrus.Errorf("Error unmarshalling request body error %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось создать пользователя из-за внутренней ошибки"))
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось создать пользователя из-за внутренней ошибки")
 		return
 	}
 	ctx := context.Background()
 	id, err := s.repo.CreateUser(ctx, req)
 	if err != nil {
 		logrus.Errorf("Error creqting user error %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось создать пользователя"))
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось создать пользователя")
 		return
 	}
 
 	logrus.Info("User succesfully created")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Пользователь успешно создан. ID пользователя %d", id)))
+	s.WriteResponse(w, http.StatusOK, fmt.Sprintf("Пользователь успешно создан. ID пользователя %d", id))
 }
 
 func (s *service) CreateUsersFromExcell(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(0)
 	if err != nil {
 		logrus.Errorf("Error parsing multipart form: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось прочитать файл"))
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось прочитать файл")
 		return
 	}
-	h := r.MultipartForm.File["user"][0]
-	fName := h.Filename
-	f, err := h.Open()
+	file, header, err := r.FormFile("user")
 	if err != nil {
-		logrus.Errorf("error opening multipart form: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось открыть файл"))
+		logrus.Errorf("error reading file from multipart data %v :", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось прочитать данные из файла")
 		return
 	}
-	tmpfile, _ := os.Create("./userfiles/" + h.Filename)
-	io.Copy(tmpfile, f)
-	f.Close()
 
-	user, err := s.GetUserFromFile(fName)
+	user, err := s.GetUserFromFile(file, header.Size)
 	if err != nil {
 		logrus.Errorf("Error getting user from file %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось прочитать файл"))
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось получить пользователя из файла")
 		return
 	}
 	ctx := context.Background()
 	id, err := s.repo.CreateUser(ctx, *user)
 	if err != nil {
 		logrus.Errorf("Error creating user %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось создать пользователя"))
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось создать пользователя")
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Пользователь успешно создан, id %d", id)))
-
+	s.WriteResponse(w, http.StatusOK, fmt.Sprintf("Пользователь успешно создан, id %d", id))
 }
 
 func (s *service) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось прочитать тело запроса"))
+		logrus.Errorf("error reading request body %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось удалить пользователя")
 		return
 	}
 	var req model.DeleteUserRequest
 	if err := jsoniter.Unmarshal(body, &req); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось сериалтзовать тело"))
+		logrus.Errorf("error unmarshalling user %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось удалить пользователя")
 		return
 	}
 	ctx := context.Background()
 	succes, err := s.repo.DeleteUser(ctx, req.UserID)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось удалить пользователя"))
+		logrus.Errorf("error deleting user %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось удалить пользователя")
 		return
 	}
 	if !succes {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Пользователя с таким id не существует"))
+		logrus.Errorf("can't find user with id %v", req.UserID)
+		s.WriteResponse(w, http.StatusNotFound, "Пользователя с таким id не существует")
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Пользователь успешно удален"))
+	s.WriteResponse(w, http.StatusOK, "Пользователь успешно удален")
 }
 
 func (s *service) ChangeUser(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось прочитать тело запроса"))
+		logrus.Errorf("error reading request body %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось изменить данные пользователя")
 		return
 	}
 	var req model.ChangeUserRequest
 
 	if err := jsoniter.Unmarshal(body, &req); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось сериализовать тело запроса"))
+		logrus.Errorf("error гтьфкырфддштп request body %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось изменить данные пользователя")
 		return
 	}
 	ctx := context.Background()
 	exists, err := s.repo.ChangeUser(ctx, model.User{Id: req.Id, Name: req.Name, Surname: req.Surname,
 		Patronymic: req.Patronymic, Sex: req.Sex, Status: req.Status})
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось обновить данные пользователя"))
+		logrus.Errorf("error updating user %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось изменить данные пользователя")
 		return
 	}
 	if !exists {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Пользователя с таким id не существует"))
+		logrus.Errorf("can't find user %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Пользователя с таким id не существует")
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Данные пользователя успешно изменены"))
+	s.WriteResponse(w, http.StatusOK, "Данные пользователя успешно изменены")
 }
 
 func (s *service) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	userIdStr := r.URL.Query().Get("user_id")
 	if userIdStr == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Введен пустой id пользователя"))
+		logrus.Errorf("quiery user_id is empty")
+		s.WriteResponse(w, http.StatusBadRequest, "Введен пустой id пользователя")
 		return
 	}
 	userId, err := strconv.Atoi(userIdStr)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Введен некорректный id пользователя, можно использовать только цифры"))
+		logrus.Errorf("entered incorrect user_id")
+		s.WriteResponse(w, http.StatusBadRequest, "Введен некорректный id пользователя, можно использовать только числа больше 0")
 		return
 	}
 	ctx := context.Background()
 	user, err := s.repo.GetUserByID(ctx, userId)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Не удалось найти пользователя"))
+		logrus.Errorf("error quering user %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось найти пользователя")
 		return
 	}
 	if user == nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Пользователь с таким id не существует"))
+		logrus.Errorf("can't find user with user_id %d", userId)
+		s.WriteResponse(w, http.StatusNotFound, "Пользователь с таким id не существует")
 		return
 	}
 
 	strBody, err := json.Marshal(user)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Ошибка сериализации пользователя"))
+		logrus.Errorf("error marshalling response %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось найти пользователя")
 		return
 	}
 
@@ -192,21 +174,21 @@ func (s *service) GetFilteredUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	users, err := s.repo.GetUsersFiltered(ctx, filter)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Ошибка поиска пользователей по заданному фильтру"))
+		logrus.Errorf("error quering user filter: %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось найти пользователей по данному фильтру")
 		return
 	}
 
 	if users == nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Для данного фильтра пользователи не найдены"))
+		logrus.Errorf("can't find users for this filter")
+		s.WriteResponse(w, http.StatusNotFound, "Для данного фильтра пользователи не найдены")
 		return
 	}
 
 	strBody, err := json.Marshal(users)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Ошибка сериализации резальтата"))
+		logrus.Errorf("error marshalling users: %v", err)
+		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось найти пользователей по данному фильтру")
 		return
 	}
 
