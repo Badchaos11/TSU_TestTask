@@ -41,7 +41,7 @@ func (s *service) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logrus.Info("User succesfully created")
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("Пользователь успешно создан. ID пользователя %d", id)))
 }
 
@@ -68,7 +68,7 @@ func (s *service) CreateUsersFromExcell(w http.ResponseWriter, r *http.Request) 
 
 	user, err := s.GetUserFromFile(fName)
 	if err != nil {
-		logrus.Errorf("Error getting user frmo file %v", err)
+		logrus.Errorf("Error getting user from file %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Не удалось прочитать файл"))
 		return

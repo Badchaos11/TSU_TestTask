@@ -20,9 +20,9 @@ type kvRepo struct {
 	ttl    time.Duration
 }
 
-func NewCacheClient(addr, password string, ctx context.Context) (ICacheRepository, error) {
+func NewCacheClient(ctx context.Context, url string) (ICacheRepository, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
+		Addr:     url,
 		Password: "",
 		DB:       0,
 	})

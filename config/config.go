@@ -20,6 +20,7 @@ func LoadConfig() (*model.Config, error) {
 		Port:       os.Getenv("PORT"),
 		DBHost:     os.Getenv("DB_HOST"),
 		DBUser:     os.Getenv("DB_USER"),
+		DBName:     os.Getenv("DB_NAME"),
 		DBPassword: os.Getenv("DB_PASSWORD"),
 		CacheUrl:   os.Getenv("CACHE_URL"),
 	}, nil

@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/Badchaos11/TSU_TestTask/model"
 	"github.com/Masterminds/squirrel"
@@ -10,14 +12,13 @@ import (
 )
 
 func (r *Repo) CreateUser(ctx context.Context, u model.User) (int64, error) {
-	const query = `INSERT INTO users (name, surname, patronymic, sex, status, birth, created) VALUES ($1, $2, $3, $4, $5, $6, now()) RETURNING id;`
+	const query = `INSERT INTO users (name, surname, patronymic, sex, status, birth_date, created) VALUES ($1, $2, $3, $4, $5, $6, now()) RETURNING id;`
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 	var id int64
 
 	err := r.PGXRepo.QueryRow(ctx, query, u.Name, u.Surname, u.Patronymic, u.Sex, u.Status, u.BirthDate).Scan(&id)
 	if err != nil {
-		logrus.Errorf("Error creating user: %v", err)
 		return 0, err
 	}
 
@@ -39,7 +40,6 @@ func (r *Repo) ChangeUser(ctx context.Context, u model.User) (bool, error) {
 			logrus.Error("There is no user with this user ID %d", u.Id)
 			return false, nil
 		}
-		logrus.Errorf("Error updating user %v", err)
 		return false, err
 	}
 
@@ -57,7 +57,6 @@ func (r *Repo) DeleteUser(ctx context.Context, userId int64) (bool, error) {
 			logrus.Errorf("There is no user with id %d", userId)
 			return false, nil
 		}
-		logrus.Errorf("Error deleting user: %v", err)
 		return false, err
 	}
 
@@ -70,14 +69,41 @@ func (r *Repo) GetUserByID(ctx context.Context, userId int) (*model.User, error)
 	defer cancel()
 	var u model.User
 
-	err := r.PGXRepo.QueryRow(ctx, query, userId).Scan(&u.Id, &u.Name, &u.Surname, &u.Patronymic, &u.Sex, &u.Status, &u.BirthDate, &u.Created)
+	uString, err := r.KVRepo.GetUsersFromCache(ctx, fmt.Sprintf("user-id:%d", userId))
+	if err != nil {
+		logrus.Errorf("Error getting user from cache: %v", err)
+	}
+
+	if uString != "" {
+		err := json.Unmarshal([]byte(uString), &u)
+		if err != nil {
+			logrus.Errorf("Error unmarshalling user: %v", err)
+			return nil, err
+		}
+		logrus.Info("Got user from cache")
+		return &u, nil
+	}
+
+	logrus.Info("Couldn't find user in cache, go to db")
+
+	err = r.PGXRepo.QueryRow(ctx, query, userId).Scan(&u.Id, &u.Name, &u.Surname, &u.Patronymic, &u.Sex, &u.Status, &u.BirthDate, &u.Created)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			logrus.Errorf("There is no user with user ID %d", userId)
 			return nil, nil
 		}
-		logrus.Errorf("Error getting user %v", err)
 		return nil, err
+	}
+
+	uStr, err := json.Marshal(u)
+	if err != nil {
+		logrus.Errorf("Error marshalling user %v", err)
+		return &u, nil
+	}
+
+	err = r.KVRepo.AddToCache(ctx, fmt.Sprintf("user-id:%d", userId), string(uStr))
+	if err != nil {
+		logrus.Errorf("Error adding user to cache: %v", err)
 	}
 
 	return &u, nil
@@ -107,11 +133,36 @@ func (r *Repo) GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([
 	}
 
 	if filter.ByName != nil && *filter.ByName {
-
+		if filter.Name != "" {
+			sq = sq.Where("name", filter.Name)
+		}
+		if filter.Surname != "" {
+			sq = sq.Where("surname", filter.Surname)
+		}
+		if filter.Patronymic != "" {
+			sq = sq.Where("patronymic", filter.Patronymic)
+		}
 	}
 
 	sql, args, _ := sq.ToSql()
 	var res []model.User
+
+	uString, err := r.KVRepo.GetUsersFromCache(ctx, fmt.Sprintf("filtered-users:%s:%s:%v:%s:%s:%s:%s:%v:%d:%d", filter.Sex, filter.Status, *filter.ByName, filter.Name, filter.Surname, filter.Patronymic, filter.OrderBy, *filter.Desc, filter.Limit, filter.Offset))
+	if err != nil {
+		logrus.Errorf("Error getting users from cache: %v", err)
+	}
+
+	if uString != "" {
+		err := json.Unmarshal([]byte(uString), &res)
+		if err != nil {
+			logrus.Errorf("Error unmarshalling users: %v", err)
+			return nil, err
+		}
+		logrus.Info("Got user from cache")
+		return res, nil
+	}
+
+	logrus.Info("Can't find users in cache, go to db")
 	rows, err := r.PGXRepo.Query(ctx, sql, args...)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -131,6 +182,17 @@ func (r *Repo) GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([
 			return nil, err
 		}
 		res = append(res, row)
+	}
+
+	uStr, err := json.Marshal(res)
+	if err != nil {
+		logrus.Errorf("Error marshalling user %v", err)
+		return res, nil
+	}
+
+	err = r.KVRepo.AddToCache(ctx, fmt.Sprintf("filtered-users:%s:%s:%v:%s:%s:%s:%s:%v:%d:%d", filter.Sex, filter.Status, *filter.ByName, filter.Name, filter.Surname, filter.Patronymic, filter.OrderBy, *filter.Desc, filter.Limit, filter.Offset), string(uStr))
+	if err != nil {
+		logrus.Errorf("Error adding user to cache: %v", err)
 	}
 
 	return res, nil

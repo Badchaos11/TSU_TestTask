@@ -18,8 +18,10 @@ func (c *kvRepo) AddToCache(ctx context.Context, key, value string) error {
 func (c *kvRepo) GetUsersFromCache(ctx context.Context, key string) (string, error) {
 	rows, err := c.client.Get(ctx, key).Result()
 	if err != nil {
-		logrus.Errorf("error getting users from cache key %s: error %v", key, err)
 		return "", err
+	}
+	if rows == "" {
+		return "", nil
 	}
 	return rows, nil
 }

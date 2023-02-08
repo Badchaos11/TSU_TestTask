@@ -7,32 +7,18 @@ import (
 	"strconv"
 
 	"github.com/Badchaos11/TSU_TestTask/model"
-	"github.com/sirupsen/logrus"
 	"github.com/xuri/excelize/v2"
 )
 
-func (s *service) WriteResponse(w http.ResponseWriter, code int, msg string) {
+func (s *service) WriteResponse(w http.ResponseWriter, code int, msg string, err error) {
 	w.WriteHeader(code)
 	type response struct {
 		Message string `json:"message"`
+		Error   string `json:"error"`
 	}
-	res := response{Message: msg}
+	res := response{Message: msg, Error: err.Error()}
 	body, _ := json.Marshal(&res)
 	w.Write(body)
-}
-
-func (s *service) GetDataFromCache(key string) ([]model.User, error) {
-	// Типа получили данные из кеша
-	// И обработали ошибку
-	var data string
-	var out []model.User
-
-	if err := json.Unmarshal([]byte(data), &out); err != nil {
-		logrus.Errorf("error unmarshalling data from cache: %v", err)
-		return nil, err
-	}
-
-	return out, nil
 }
 
 func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
@@ -41,7 +27,9 @@ func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 
 	sex := r.URL.Query().Get("sex")
 	status := r.URL.Query().Get("status")
-	fullName := r.URL.Query().Get("full_name")
+	name := r.URL.Query().Get("name")
+	surname := r.URL.Query().Get("surname")
+	patr := r.URL.Query().Get("patronymic")
 	orderBy := r.URL.Query().Get("order_by")
 
 	byNameStr := r.URL.Query().Get("by_name")
@@ -69,14 +57,16 @@ func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 	}
 
 	return model.UserFilter{
-		Sex:      sex,
-		Status:   status,
-		FullName: fullName,
-		OrderBy:  orderBy,
-		Limit:    uint64(limit),
-		Offset:   uint64(offset),
-		Desc:     desc,
-		ByName:   byName,
+		Sex:        sex,
+		Status:     status,
+		OrderBy:    orderBy,
+		Limit:      uint64(limit),
+		Offset:     uint64(offset),
+		Desc:       desc,
+		ByName:     byName,
+		Name:       name,
+		Surname:    surname,
+		Patronymic: patr,
 	}
 }
 

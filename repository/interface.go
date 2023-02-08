@@ -8,7 +8,6 @@ import (
 	"github.com/Badchaos11/TSU_TestTask/repository/cache"
 	"github.com/fatih/structs"
 	"github.com/jackc/pgx/v5"
-	"github.com/sirupsen/logrus"
 )
 
 type IRepository interface {
@@ -29,12 +28,17 @@ type Repo struct {
 func NewRepository(ctx context.Context, dsn string, cacheUrl string) (IRepository, error) {
 	conn, err := pgx.Connect(ctx, dsn)
 	if err != nil {
-		logrus.Errorf("Error connecting to database: %v", err)
+		return nil, err
+	}
+
+	cacheConn, err := cache.NewCacheClient(ctx, cacheUrl)
+	if err != nil {
 		return nil, err
 	}
 
 	return &Repo{
 		PGXRepo: conn,
+		KVRepo:  cacheConn,
 		timeout: time.Second * 5,
 	}, nil
 }
