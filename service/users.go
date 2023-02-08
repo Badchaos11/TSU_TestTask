@@ -144,7 +144,12 @@ func (s *service) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	userId, err := strconv.Atoi(userIdStr)
 	if err != nil {
 		logrus.Errorf("entered incorrect user_id")
-		s.WriteResponse(w, http.StatusBadRequest, "Введен некорректный id пользователя, можно использовать только числа больше 0")
+		s.WriteResponse(w, http.StatusBadRequest, "Введен некорректный id пользователя, можно использовать только цифры")
+		return
+	}
+	if userId <= 0 {
+		logrus.Errorf("entered incorrect user_id")
+		s.WriteResponse(w, http.StatusBadRequest, "Введен некорректный id пользователя, можно использовать только xbckf ,jkmit 0")
 		return
 	}
 	ctx := context.Background()

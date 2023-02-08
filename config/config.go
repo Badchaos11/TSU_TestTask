@@ -9,8 +9,13 @@ import (
 )
 
 func LoadConfig() (*model.Config, error) {
+	d := os.Getenv("DEPLOY")
+	f := "./configs/.env"
+	if d == "docker" {
+		f = "./configs/docker.env"
+	}
 
-	err := godotenv.Load("./configs/.env")
+	err := godotenv.Load(f)
 	if err != nil {
 		logrus.Errorf("failed to load config: %v", err)
 		return nil, err

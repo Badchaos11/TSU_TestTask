@@ -1,5 +1,7 @@
 FROM golang:1.19-alpine3.16 AS builder
 
+ENV DEPLOY=docker
+
 ADD . /src/app
 WORKDIR /src/app
 RUN go mod download

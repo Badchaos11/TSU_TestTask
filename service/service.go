@@ -36,7 +36,7 @@ func (s *service) Run() {
 	router.HandleFunc("/get_user_by_id", s.GetUserByID).Methods("GET")
 	router.HandleFunc("/get_filtered_users", s.GetFilteredUsers).Methods("GET")
 	router.HandleFunc("/create_user", s.CreateNewUser).Methods("POST")
-	router.HandleFunc("/create_users_from_file", s.CreateUsersFromExcell).Methods("POST")
+	router.HandleFunc("/create_user_from_file", s.CreateUsersFromExcell).Methods("POST")
 	router.HandleFunc("/change_user", s.ChangeUser).Methods("POST")
 	router.HandleFunc("/delete_user", s.DeleteUser).Methods("DELETE")
 

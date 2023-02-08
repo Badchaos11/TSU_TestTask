@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/Badchaos11/TSU_TestTask/model"
 	"github.com/Masterminds/squirrel"
@@ -17,7 +18,12 @@ func (r *Repo) CreateUser(ctx context.Context, u model.User) (int64, error) {
 	defer cancel()
 	var id int64
 
-	err := r.PGXRepo.QueryRow(ctx, query, u.Name, u.Surname, u.Patronymic, u.Sex, u.Status, u.BirthDate).Scan(&id)
+	birth, err := time.Parse("2006-01-02", u.BirthDate)
+	if err != nil {
+		return 0, err
+	}
+
+	err = r.PGXRepo.QueryRow(ctx, query, u.Name, u.Surname, u.Patronymic, u.Sex, u.Status, birth).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -30,12 +36,18 @@ func (r *Repo) ChangeUser(ctx context.Context, u model.ChangeUserRequest) (bool,
 	fvMap := makeFieldValMap(u)
 	for k, v := range fvMap {
 		if v != "" {
+			if k == "birth_date" {
+				date, err := time.Parse("2006-01-02", v)
+				if err != nil {
+					return false, err
+				}
+				ub = ub.Set(k, date)
+				continue
+			}
 			ub = ub.Set(k, v)
 		}
 	}
-	if u.BirthDate != nil {
-		ub = ub.Set("birth_date", *u.BirthDate)
-	}
+
 	sql, args, _ := ub.ToSql()
 	_, err := r.PGXRepo.Exec(ctx, sql, args...)
 	if err != nil {
