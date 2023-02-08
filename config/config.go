@@ -21,5 +21,6 @@ func LoadConfig() (*model.Config, error) {
 		DBHost:     os.Getenv("DB_HOST"),
 		DBUser:     os.Getenv("DB_USER"),
 		DBPassword: os.Getenv("DB_PASSWORD"),
+		CacheUrl:   os.Getenv("CACHE_URL"),
 	}, nil
 }

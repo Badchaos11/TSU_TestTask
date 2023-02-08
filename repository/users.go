@@ -9,13 +9,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (r *PGXRepo) CreateUser(ctx context.Context, u model.User) (int64, error) {
+func (r *Repo) CreateUser(ctx context.Context, u model.User) (int64, error) {
 	const query = `INSERT INTO users (name, surname, patronymic, sex, status, birth, created) VALUES ($1, $2, $3, $4, $5, $6, now()) RETURNING id;`
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 	var id int64
 
-	err := r.Conn.QueryRow(ctx, query, u.Name, u.Surname, u.Patronymic, u.Sex, u.Status, u.BirthDate).Scan(&id)
+	err := r.PGXRepo.QueryRow(ctx, query, u.Name, u.Surname, u.Patronymic, u.Sex, u.Status, u.BirthDate).Scan(&id)
 	if err != nil {
 		logrus.Errorf("Error creating user: %v", err)
 		return 0, err
@@ -24,7 +24,7 @@ func (r *PGXRepo) CreateUser(ctx context.Context, u model.User) (int64, error) {
 	return id, nil
 }
 
-func (r *PGXRepo) ChangeUser(ctx context.Context, u model.User) (bool, error) {
+func (r *Repo) ChangeUser(ctx context.Context, u model.User) (bool, error) {
 	ub := squirrel.Update("users").PlaceholderFormat(squirrel.Dollar).Where("id", u.Id)
 	fvMap := makeFieldValMap(u)
 	for k, v := range fvMap {
@@ -33,7 +33,7 @@ func (r *PGXRepo) ChangeUser(ctx context.Context, u model.User) (bool, error) {
 		}
 	}
 	sql, args, _ := ub.ToSql()
-	_, err := r.Conn.Exec(ctx, sql, args...)
+	_, err := r.PGXRepo.Exec(ctx, sql, args...)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			logrus.Error("There is no user with this user ID %d", u.Id)
@@ -46,12 +46,12 @@ func (r *PGXRepo) ChangeUser(ctx context.Context, u model.User) (bool, error) {
 	return true, nil
 }
 
-func (r *PGXRepo) DeleteUser(ctx context.Context, userId int64) (bool, error) {
+func (r *Repo) DeleteUser(ctx context.Context, userId int64) (bool, error) {
 	const query = `DELETE FROM users WHERE id=$1`
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
-	_, err := r.Conn.Exec(ctx, query, userId)
+	_, err := r.PGXRepo.Exec(ctx, query, userId)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			logrus.Errorf("There is no user with id %d", userId)
@@ -64,13 +64,13 @@ func (r *PGXRepo) DeleteUser(ctx context.Context, userId int64) (bool, error) {
 	return true, nil
 }
 
-func (r *PGXRepo) GetUserByID(ctx context.Context, userId int64) (*model.User, error) {
+func (r *Repo) GetUserByID(ctx context.Context, userId int) (*model.User, error) {
 	const query = `SELECT * FROM users WHERE id=$1`
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 	var u model.User
 
-	err := r.Conn.QueryRow(ctx, query, userId).Scan(&u.Id, &u.Name, &u.Surname, &u.Patronymic, &u.Sex, &u.Status, &u.BirthDate, &u.Created)
+	err := r.PGXRepo.QueryRow(ctx, query, userId).Scan(&u.Id, &u.Name, &u.Surname, &u.Patronymic, &u.Sex, &u.Status, &u.BirthDate, &u.Created)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			logrus.Errorf("There is no user with user ID %d", userId)
@@ -83,7 +83,7 @@ func (r *PGXRepo) GetUserByID(ctx context.Context, userId int64) (*model.User, e
 	return &u, nil
 }
 
-func (r *PGXRepo) GetUserFilter(ctx context.Context, filter model.UserFilter) ([]model.User, error) {
+func (r *Repo) GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([]model.User, error) {
 	sq := squirrel.Select("*").From("users").PlaceholderFormat(squirrel.Dollar)
 	if filter.Limit > 0 {
 		sq = sq.Limit(filter.Limit)
@@ -100,12 +100,19 @@ func (r *PGXRepo) GetUserFilter(ctx context.Context, filter model.UserFilter) ([
 	}
 
 	if filter.OrderBy == "sex" || filter.OrderBy == "status" {
-		sq = sq.OrderBy(filter.OrderBy, "desc")
+		if filter.Desc != nil && *filter.Desc {
+			sq = sq.OrderBy(filter.OrderBy, "desc")
+		}
+		sq = sq.OrderBy(filter.OrderBy)
+	}
+
+	if filter.ByName != nil && *filter.ByName {
+
 	}
 
 	sql, args, _ := sq.ToSql()
 	var res []model.User
-	rows, err := r.Conn.Query(ctx, sql, args...)
+	rows, err := r.PGXRepo.Query(ctx, sql, args...)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			logrus.Error("No userf for this filter")

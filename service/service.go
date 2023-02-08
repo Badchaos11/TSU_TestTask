@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,17 +15,18 @@ import (
 )
 
 type service struct {
-	Port string
-	Repo repository.IRepository
+	port string
+	repo repository.IRepository
 }
 
 func NewService(ctx context.Context, config *model.Config) (*service, error) {
-	conn, err := repository.NewRepository(ctx, "")
+	dsnPg := fmt.Sprintf("user=%s password=%s host=%s dbname=%s sslmode=disable", config.DBUser, config.DBPassword, config.DBHost, config.DBName)
+	conn, err := repository.NewRepository(ctx, dsnPg, os.Getenv("CACHE_URL"))
 	if err != nil {
 		logrus.Errorf("Unable to connect database error %v", err)
 		return nil, err
 	}
-	return &service{Port: "3000", Repo: conn}, nil
+	return &service{port: config.Port, repo: conn}, nil
 }
 
 func (s *service) Run() {
@@ -34,14 +34,14 @@ func (s *service) Run() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/get_user_by_id", s.GetUserByID).Methods("GET")
-	router.HandleFunc("/get_filtered_users", s.GetFilteredUsers).Methods("POST")
+	router.HandleFunc("/get_filtered_users", s.GetFilteredUsers).Methods("GET")
 	router.HandleFunc("/create_user", s.CreateNewUser).Methods("POST")
 	router.HandleFunc("/create_users_from_file", s.CreateUsersFromExcell).Methods("POST")
 	router.HandleFunc("/change_user", s.ChangeUser).Methods("POST")
 	router.HandleFunc("/delete_user", s.DeleteUser).Methods("DELETE")
 
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%v", s.Port), // Порт сервера
+		Addr:         fmt.Sprintf(":%s", s.port), // Порт сервера
 		Handler:      router,                     // Хэндлеры
 		ReadTimeout:  5 * time.Second,            // Таймаут запроса клиента
 		WriteTimeout: 10 * time.Second,           // Таймаут ответа клиенту
@@ -49,7 +49,7 @@ func (s *service) Run() {
 	}
 
 	go func() {
-		logrus.Infof("starting server on port %v", s.Port)
+		logrus.Infof("starting server on port %v", s.port)
 
 		err := server.ListenAndServe()
 		if err != nil {
@@ -87,14 +87,4 @@ func init() {
 		FullTimestamp:   true,
 	})
 	logrus.SetLevel(logrus.DebugLevel)
-}
-
-func (s *service) WriteResponse(w http.ResponseWriter, code int, msg string) {
-	w.WriteHeader(code)
-	type response struct {
-		Message string `json:"message"`
-	}
-	res := response{Message: msg}
-	body, _ := json.Marshal(&res)
-	w.Write(body)
 }

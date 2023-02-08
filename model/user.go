@@ -16,14 +16,27 @@ type User struct {
 type UserFilter struct {
 	Sex      string `json:"sex,omitempty"`
 	Status   string `json:"status,omitempty"`
-	ByName   bool   `json:"by_name,omitempty"`
+	ByName   *bool  `json:"by_name,omitempty"`
 	FullName string `json:"fullname,omitempty"`
 	OrderBy  string `json:"order_by,omitempty"`
-	Desc     bool   `json:"sort_desc,omitempty"`
+	Desc     *bool  `json:"sort_desc,omitempty"`
 	Limit    uint64 `json:"limit,omitempty"`
 	Offset   uint64 `json:"offset,omitempty"`
 }
 
 type ResponseMessage struct {
 	Message string `json:"message"`
+}
+
+type DeleteUserRequest struct {
+	UserID int64 `json:"user_id"`
+}
+
+type ChangeUserRequest struct {
+	Id         int64  `json:"id"`
+	Name       string `json:"name"`
+	Surname    string `json:"surname"`
+	Patronymic string `json:"patronymic"`
+	Sex        string `json:"sex"`
+	Status     string `json:"status"`
 }

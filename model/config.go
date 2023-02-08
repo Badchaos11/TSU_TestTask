@@ -6,4 +6,5 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	DBName     string
+	CacheUrl   string
 }

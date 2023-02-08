@@ -1,4 +1,4 @@
-package cacheRepository
+package cache
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type ICacheRepository interface {
 	ClearCache(ctx context.Context) error
 }
 
-type cache struct {
+type kvRepo struct {
 	client *redis.Client
 	ttl    time.Duration
 }
@@ -33,5 +33,5 @@ func NewCacheClient(addr, password string, ctx context.Context) (ICacheRepositor
 		return nil, err
 	}
 
-	return &cache{client: rdb, ttl: time.Hour * 1}, nil
+	return &kvRepo{client: rdb, ttl: time.Hour * 1}, nil
 }
