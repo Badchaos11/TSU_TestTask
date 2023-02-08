@@ -28,6 +28,7 @@ func (s *service) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось создать пользователя из-за внутренней ошибки")
 		return
 	}
+	req.Status = "Активен"
 	ctx := context.Background()
 	id, err := s.repo.CreateUser(ctx, req)
 	if err != nil {
@@ -60,6 +61,8 @@ func (s *service) CreateUsersFromExcell(w http.ResponseWriter, r *http.Request) 
 		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось получить пользователя из файла")
 		return
 	}
+
+	user.Status = "Активен"
 	ctx := context.Background()
 	id, err := s.repo.CreateUser(ctx, *user)
 	if err != nil {
@@ -114,9 +117,9 @@ func (s *service) ChangeUser(w http.ResponseWriter, r *http.Request) {
 		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось изменить данные пользователя")
 		return
 	}
+
 	ctx := context.Background()
-	exists, err := s.repo.ChangeUser(ctx, model.User{Id: req.Id, Name: req.Name, Surname: req.Surname,
-		Patronymic: req.Patronymic, Sex: req.Sex, Status: req.Status})
+	exists, err := s.repo.ChangeUser(ctx, req)
 	if err != nil {
 		logrus.Errorf("error updating user %v", err)
 		s.WriteResponse(w, http.StatusInternalServerError, "Не удалось изменить данные пользователя")

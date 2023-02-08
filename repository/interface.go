@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/Badchaos11/TSU_TestTask/model"
@@ -12,7 +13,7 @@ import (
 
 type IRepository interface {
 	CreateUser(ctx context.Context, u model.User) (int64, error)
-	ChangeUser(ctx context.Context, u model.User) (bool, error)
+	ChangeUser(ctx context.Context, u model.ChangeUserRequest) (bool, error)
 	DeleteUser(ctx context.Context, userId int64) (bool, error)
 	GetUserByID(ctx context.Context, userId int) (*model.User, error)
 	GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([]model.User, error)
@@ -43,12 +44,16 @@ func NewRepository(ctx context.Context, dsn string, cacheUrl string) (IRepositor
 	}, nil
 }
 
-func makeFieldValMap(u model.User) map[string]string {
+func makeFieldValMap(u model.ChangeUserRequest) map[string]string {
 	fields := structs.Fields(u)
-	res := make(map[string]string, 6)
+	res := make(map[string]string, 0)
 
 	for _, field := range fields {
 		f := field.Tag("json")
+		f = strings.Split(f, ",")[0]
+		if f == "id" || f == "birth_date" {
+			continue
+		}
 		res[f] = field.Value().(string)
 	}
 

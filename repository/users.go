@@ -25,13 +25,16 @@ func (r *Repo) CreateUser(ctx context.Context, u model.User) (int64, error) {
 	return id, nil
 }
 
-func (r *Repo) ChangeUser(ctx context.Context, u model.User) (bool, error) {
-	ub := squirrel.Update("users").PlaceholderFormat(squirrel.Dollar).Where("id", u.Id)
+func (r *Repo) ChangeUser(ctx context.Context, u model.ChangeUserRequest) (bool, error) {
+	ub := squirrel.Update("users").PlaceholderFormat(squirrel.Dollar).Where(squirrel.Eq{"id": u.Id})
 	fvMap := makeFieldValMap(u)
 	for k, v := range fvMap {
 		if v != "" {
 			ub = ub.Set(k, v)
 		}
+	}
+	if u.BirthDate != nil {
+		ub = ub.Set("birth_date", *u.BirthDate)
 	}
 	sql, args, _ := ub.ToSql()
 	_, err := r.PGXRepo.Exec(ctx, sql, args...)
@@ -119,10 +122,10 @@ func (r *Repo) GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([
 	}
 
 	if filter.Sex != "" {
-		sq = sq.Where("sex", filter.Sex)
+		sq = sq.Where(squirrel.Eq{"sex": filter.Sex})
 	}
 	if filter.Status != "" {
-		sq = sq.Where("status", filter.Status)
+		sq = sq.Where(squirrel.Eq{"status": filter.Status})
 	}
 
 	if filter.OrderBy == "sex" || filter.OrderBy == "status" {
@@ -135,13 +138,13 @@ func (r *Repo) GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([
 
 	if filter.ByName != nil && *filter.ByName {
 		if filter.Name != "" {
-			sq = sq.Where("name", filter.Name)
+			sq = sq.Where(squirrel.Eq{"name": filter.Name})
 		}
 		if filter.Surname != "" {
-			sq = sq.Where("surname", filter.Surname)
+			sq = sq.Where(squirrel.Eq{"surname": filter.Surname})
 		}
 		if filter.Patronymic != "" {
-			sq = sq.Where("patronymic", filter.Patronymic)
+			sq = sq.Where(squirrel.Eq{"patronymic": filter.Patronymic})
 		}
 	}
 
