@@ -22,7 +22,7 @@ func (s *service) WriteResponse(w http.ResponseWriter, code int, msg string) {
 
 func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 	var limit, offset int64
-	var byName, desc bool
+	var desc bool
 
 	sex := r.URL.Query().Get("sex")
 	status := r.URL.Query().Get("status")
@@ -31,7 +31,6 @@ func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 	patr := r.URL.Query().Get("patronymic")
 	orderBy := r.URL.Query().Get("order_by")
 
-	byNameStr := r.URL.Query().Get("by_name")
 	descStr := r.URL.Query().Get("desc")
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
@@ -45,10 +44,6 @@ func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 		offset = 0
 	}
 
-	if byNameStr != "" {
-		byName, _ = strconv.ParseBool(byNameStr)
-	}
-
 	if descStr != "" {
 		desc, _ = strconv.ParseBool(descStr)
 	}
@@ -60,7 +55,6 @@ func (s *service) GetUserFilter(r *http.Request) model.UserFilter {
 		Limit:      uint64(limit),
 		Offset:     uint64(offset),
 		Desc:       &desc,
-		ByName:     &byName,
 		Name:       name,
 		Surname:    surname,
 		Patronymic: patr,

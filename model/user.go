@@ -16,7 +16,6 @@ type User struct {
 type UserFilter struct {
 	Sex        string `json:"sex,omitempty"`
 	Status     string `json:"status,omitempty"`
-	ByName     *bool  `json:"by_name,omitempty"`
 	Name       string `json:"name,omitempty"`
 	Surname    string `json:"surname,omitempty"`
 	Patronymic string `json:"patronymic,omitempty"`

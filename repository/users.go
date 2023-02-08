@@ -136,22 +136,20 @@ func (r *Repo) GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([
 		sq = sq.OrderBy(filter.OrderBy)
 	}
 
-	if filter.ByName != nil && *filter.ByName {
-		if filter.Name != "" {
-			sq = sq.Where(squirrel.Eq{"name": filter.Name})
-		}
-		if filter.Surname != "" {
-			sq = sq.Where(squirrel.Eq{"surname": filter.Surname})
-		}
-		if filter.Patronymic != "" {
-			sq = sq.Where(squirrel.Eq{"patronymic": filter.Patronymic})
-		}
+	if filter.Name != "" {
+		sq = sq.Where(squirrel.Eq{"name": filter.Name})
+	}
+	if filter.Surname != "" {
+		sq = sq.Where(squirrel.Eq{"surname": filter.Surname})
+	}
+	if filter.Patronymic != "" {
+		sq = sq.Where(squirrel.Eq{"patronymic": filter.Patronymic})
 	}
 
 	sql, args, _ := sq.ToSql()
 	var res []model.User
 
-	uString, err := r.KVRepo.GetUsersFromCache(ctx, fmt.Sprintf("filtered-users:%s:%s:%v:%s:%s:%s:%s:%v:%d:%d", filter.Sex, filter.Status, *filter.ByName, filter.Name, filter.Surname, filter.Patronymic, filter.OrderBy, *filter.Desc, filter.Limit, filter.Offset))
+	uString, err := r.KVRepo.GetUsersFromCache(ctx, fmt.Sprintf("filtered-users:%s:%s:%s:%s:%s:%s:%v:%d:%d", filter.Sex, filter.Status, filter.Name, filter.Surname, filter.Patronymic, filter.OrderBy, *filter.Desc, filter.Limit, filter.Offset))
 	if err != nil {
 		logrus.Errorf("Error getting users from cache: %v", err)
 	}
@@ -194,7 +192,7 @@ func (r *Repo) GetUsersFiltered(ctx context.Context, filter model.UserFilter) ([
 		return res, nil
 	}
 
-	err = r.KVRepo.AddToCache(ctx, fmt.Sprintf("filtered-users:%s:%s:%v:%s:%s:%s:%s:%v:%d:%d", filter.Sex, filter.Status, *filter.ByName, filter.Name, filter.Surname, filter.Patronymic, filter.OrderBy, *filter.Desc, filter.Limit, filter.Offset), string(uStr))
+	err = r.KVRepo.AddToCache(ctx, fmt.Sprintf("filtered-users:%s:%s:%s:%s:%s:%s:%v:%d:%d", filter.Sex, filter.Status, filter.Name, filter.Surname, filter.Patronymic, filter.OrderBy, *filter.Desc, filter.Limit, filter.Offset), string(uStr))
 	if err != nil {
 		logrus.Errorf("Error adding user to cache: %v", err)
 	}
